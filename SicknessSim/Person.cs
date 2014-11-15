@@ -1,33 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Windows.Media;
 
 namespace SicknessSim {
-    internal static class Constants {
-        public const int IniitialInfected = 50;
-        // Likelihood that you infect someone else in your influence radius
-        public const double InfectiousInfectionRate = 0.02;
-        public const double SickInfectionRate = 0.08;
-        public const double DeadInfectionRate = 0.1;
-        public const double RoomSize = 800.0;
-        public const double InfluenceRadius = 25.0;
-        public const int PopulationSize = 250;
-        public const double MoveDistance = 2.0;
-        public const int ChangeDirectionAfter = 10;
-        public const int TimeInfectious = 50;
-        public const int TimeSick = 100;
-        public const int RemoveDeadAfter = 20;
-
-        public static readonly Color HealthyColor = Colors.Green;
-        public static readonly Color InfectiousColor = Colors.Orange;
-        public static readonly Color SickColor = Colors.Red;
-        public static readonly Color DeadColor = Colors.Black;
-    }
-
-    // TODO maybe introudce Immune 
-    // Healthy -> Infectious -> Sick -> Immune (not everyone dies)
     internal enum Status {
         Healthy,
         Infectious,
@@ -182,109 +157,22 @@ namespace SicknessSim {
                     break;
                 case Status.Infectious:
                     if (t >= TimeInfected + Constants.TimeInfectious) {
-                        //Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
-                        Console.WriteLine("Time infected: " + (t - TimeInfected));
+                        Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
                         Status = Status.Sick;
                         TimeSick = t;
                     }
                     break;
                 case Status.Sick:
                     if (t >= TimeSick + Constants.TimeSick) {
-                        //Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
-                        Console.WriteLine("Time died: " + (t - TimeSick));
-
-                        Status = Status.Dead;
-                        TimeDied = t;
+                        double u = rng.NextDouble();
+                        if (u <= Constants.DieRate) {
+                            Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
+                            Status = Status.Dead;
+                            TimeDied = t;
+                        }
                     }
                     break;
             }
-        }
-    }
-
-    internal class Simulation {
-        private readonly List<Person> Population;
-        private readonly Random rng;
-        private int time;
-
-        public Simulation(int popSize) {
-            rng = new Random();
-
-            Population = new List<Person>();
-            for (var i = 0; i < popSize - Constants.IniitialInfected; i++) {
-                var xPos = rng.NextDouble() * Constants.RoomSize;
-                var yPos = rng.NextDouble() * Constants.RoomSize;
-                var person = new Person(new Vector(xPos, yPos), Status.Healthy, rng);
-                Population.Add(person);
-            }
-
-            for (var i = 0; i < Constants.IniitialInfected; i++) {
-                var xPos = rng.NextDouble() * Constants.RoomSize;
-                var yPos = rng.NextDouble() * Constants.RoomSize;
-                var person = new Person(new Vector(xPos, yPos), Status.Infectious, rng);
-                Population.Add(person);
-            }
-
-            time = 0;
-        }
-
-        public int Time {
-            get { return time; }
-        }
-
-        public List<Person> Persons {
-            get { return Population; }
-        }
-
-        private IEnumerable<Person> findPersonsInInfluenceRadius(Person p) {
-            return Population.Where(person =>
-                // Only healthy persons can get infected
-                person.Status == Status.Healthy &&
-                person.DistanceTo(p) <= Constants.InfluenceRadius);
-        }
-
-        public void Tick() {
-            foreach (var person in Population) {
-                person.Tick(time);
-
-                if (person.Status != Status.Healthy) {
-                    var influenced = findPersonsInInfluenceRadius(person).ToList();
-                    foreach (var p in influenced) {
-                        var t = rng.NextDouble();
-                        var rate = 0.0;
-                        switch (person.Status) {
-                            case Status.Infectious:
-                                rate = Constants.InfectiousInfectionRate;
-                                break;
-                            case Status.Sick:
-                                rate = Constants.SickInfectionRate;
-                                break;
-                            case Status.Dead:
-                                rate = Constants.DeadInfectionRate;
-                                break;
-                            default: Debug.Fail("A healthy person is sick?");
-                                break;
-                        }
-
-                        if (t <= rate) {
-                            p.Status = Status.Infectious;
-                            p.TimeInfected = time;
-                            Console.WriteLine("Person {0} infected {1}", person.Id, p.Id);
-                        }
-                    }
-                }
-
-                if (person.Status == Status.Dead && time >= person.TimeDied + Constants.RemoveDeadAfter) {
-                    person.ToBeRemoved = true;
-                }
-            }
-
-
-            Population.RemoveAll(p => p.ToBeRemoved);
-            if (time % 50 == 0) {
-                var numInfected = Population.Count(p => p.Status == Status.Infectious || p.Status == Status.Sick || p.Status == Status.Dead);
-                Console.WriteLine("#Infected at {0}: {1}", time, numInfected);
-            }
-            time++;
         }
     }
 }
