@@ -42,7 +42,7 @@ namespace SicknessSim {
                             break;
                     }
                     //var r = (int)Constants.InfluenceRadius;
-                    //bitmap.FillEllipseCentered((int)person.Position.X, (int)person.Position.Y, r, r, Color.FromArgb(80, 255, 0, 0));
+                    //bitmap.FillEllipseCentered((int)person.Position.X, (int)person.Position.Y, r, r, Color.FromArgb(50, 255, 255, 0));
                     bitmap.FillEllipseCentered((int) person.Position.X, (int) person.Position.Y, 2, 2, color);
                 }
             }
