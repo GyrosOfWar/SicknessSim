@@ -44,6 +44,7 @@ namespace SicknessSim {
             TimeSick = null;
             TimeDied = null;
             ToBeRemoved = false;
+            currentDieRate = Constants.DieRate;
         }
 
         public Vector Position { get; private set; }
@@ -54,6 +55,8 @@ namespace SicknessSim {
         public int? TimeDied { get; private set; }
         public int? TimeSick { get; set; }
         public bool ToBeRemoved { get; set; }
+
+        private double currentDieRate;
 
         public void Dispose() {
             lock (Lock) {
@@ -165,10 +168,12 @@ namespace SicknessSim {
                 case Status.Sick:
                     if (t >= TimeSick + Constants.TimeSick) {
                         double u = rng.NextDouble();
-                        if (u <= Constants.DieRate) {
+                        if (u <= currentDieRate) {
                             Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
                             Status = Status.Dead;
                             TimeDied = t;
+                        } else {
+                            currentDieRate *= 2.0;
                         }
                     }
                     break;

@@ -15,12 +15,18 @@ namespace SicknessSim {
             InitializeComponent();
             simulation = new Simulation(Constants.PopulationSize);
             bitmap = BitmapFactory.New(800, 800);
+            bitmap.Clear(Colors.Black);
             img.Source = bitmap;
+
+            CompositionTarget.Rendering += (s, t) => {
+                DrawSimulation();
+                simulation.Tick();
+            };
         }
 
         public void DrawSimulation() {
             using (bitmap.GetBitmapContext()) {
-                bitmap.Clear();
+                bitmap.Clear(Colors.Black);
                 foreach (var person in simulation.Persons) {
                     var color = Colors.Green;
 
@@ -46,13 +52,6 @@ namespace SicknessSim {
                     bitmap.FillEllipseCentered((int) person.Position.X, (int) person.Position.Y, 2, 2, color);
                 }
             }
-        }
-
-        private void StartButton_Click(object sender, RoutedEventArgs e) {
-            CompositionTarget.Rendering += (s, t) => {
-                DrawSimulation();
-                simulation.Tick();
-            };
         }
     }
 }
