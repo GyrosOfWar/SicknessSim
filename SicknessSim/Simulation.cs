@@ -58,7 +58,6 @@ namespace SicknessSim {
 
         public void AddPerson(Person p) {
             Population.Add(p);
-            throw new NotImplementedException();
         }
 
         private IEnumerable<Person> findPersonsInInfluenceRadius(Person p) {
@@ -82,9 +81,14 @@ namespace SicknessSim {
 
         public void Tick() {
             var stopwatch = Stopwatch.StartNew();
+
+            quadTree.Clear();
+            foreach (var x in Population) {
+                quadTree.Insert(x);
+            }
+
             //Parallel.ForEach(Population, person => {
-            foreach (var person in Population) {
-                quadTree.Clear();
+            foreach (var person in quadTree.AllPersons()) {
                 person.Tick(time);
 
                 if (person.Status != Status.Healthy) {

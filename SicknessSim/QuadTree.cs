@@ -111,6 +111,10 @@ namespace SicknessSim {
             returnObjects.AddRange(objects);
 
             return returnObjects;
+        }
+
+        public List<Person> AllPersons() {
+            return Query(new Rect(0, 0, Constants.RoomSize, Constants.RoomSize));
         } 
 
         public void Insert(Person person) {
