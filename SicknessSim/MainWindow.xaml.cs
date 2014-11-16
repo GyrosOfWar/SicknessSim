@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -25,8 +26,9 @@ namespace SicknessSim {
             };
         }
 
-        public void DrawSimulation() {
+        private void DrawSimulation() {
             if (simulation.SimulationFinished) {
+                Console.WriteLine("Time end: " + simulation.Time);
                 return;
             }
 

@@ -18,11 +18,10 @@ namespace SicknessSim {
         Left = 3
     }
 
-    internal class Person: IDisposable, IQuadObject {
+    internal class Person: IDisposable {
         private static readonly List<bool> UsedCounter = new List<bool>();
         private static readonly object Lock = new object();
         private readonly Random rng;
-        private Rect _bounds;
         private double currentDieRate;
         private Direction facingDirection;
         private int lastDirectionChange;
@@ -65,12 +64,6 @@ namespace SicknessSim {
             }
         }
 
-        public Rect Bounds {
-            get { return _bounds; }
-        }
-
-        public event EventHandler BoundsChanged;
-
         public override string ToString() {
             return Id + ": " + Status;
         }
@@ -97,19 +90,15 @@ namespace SicknessSim {
             switch (direction) {
                 case Direction.Top:
                     newPosition = Position + new Vector(0, -distance);
-                    _bounds.Y -= distance;
                     break;
                 case Direction.Right:
                     newPosition = Position + new Vector(distance, 0);
-                    _bounds.X += distance;
                     break;
                 case Direction.Down:
                     newPosition = Position + new Vector(0, distance);
-                    _bounds.Y += distance;
                     break;
                 case Direction.Left:
                     newPosition = Position + new Vector(-distance, 0);
-                    _bounds.X += distance;
                     break;
                 default:
                     Debug.Fail("should never happen");
@@ -135,7 +124,6 @@ namespace SicknessSim {
             }
 
             var newPositionClamped = new Vector(clampedX, clampedY);
-            RaiseBoundsChanged();
 
             return newPositionClamped;
         }
@@ -164,7 +152,7 @@ namespace SicknessSim {
                     facingDirection = randomDirection();
                     lastDirectionChange = t;
                 }
-                //Move();
+                Move();
             }
 
             switch (Status) {
@@ -191,12 +179,6 @@ namespace SicknessSim {
                     }
                     break;
             }
-        }
-
-        private void RaiseBoundsChanged() {
-            var handler = BoundsChanged;
-            if (handler != null)
-                handler(this, new EventArgs());
         }
     }
 }

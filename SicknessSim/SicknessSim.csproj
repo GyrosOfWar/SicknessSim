@@ -57,7 +57,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Constants.cs" />
-    <Compile Include="QuadTreeDirection.cs" />
+    <Compile Include="QuadTree.cs" />
     <Compile Include="Simulation.cs" />
     <Compile Include="Vector.cs" />
     <Page Include="MainWindow.xaml">

@@ -12,10 +12,10 @@ namespace SicknessSim {
         private int time;
         private double averageNeighbors;
         private double numSamples;
-        private QuadTree<Person> quadTree;
+        private QuadTree quadTree;
 
         public Simulation(int popSize) {
-            rng = new Random();
+            rng = new Random(1234);
 
             Population = new List<Person>(popSize);
             for (var i = 0; i < popSize - Constants.IniitialInfected; i++) {
@@ -38,10 +38,9 @@ namespace SicknessSim {
             averageNeighbors = 1;
             numSamples = 1;
 
-            quadTree = new QuadTree<Person>(new Size(25, 25), 32, false);
+            quadTree = new QuadTree(0, new Rect(0, 0, Constants.RoomSize, Constants.RoomSize));
             foreach (var person in Population) {
                 quadTree.Insert(person);
-                Console.WriteLine("Inserted " + person);
             }
         }
 
@@ -59,23 +58,22 @@ namespace SicknessSim {
 
         public void AddPerson(Person p) {
             Population.Add(p);
-            quadTree.Insert(p);
+            throw new NotImplementedException();
         }
 
         private IEnumerable<Person> findPersonsInInfluenceRadius(Person p) {
             const int r = Constants.InfluenceRadius;
-            var pp = p.Position - r;
-            const int l = r * 2;
-            var query = quadTree.Query(new Rect(pp.X, pp.Y, l, l));
+            var origin = p.Position - r;
+            const int length = r * 2;
+            var points = quadTree.Query(new Rect(origin.X, origin.Y, length, length));
 
-            return query.Where(person =>
+            return points.Where(person =>
                 //  Only healthy persons can get infected
-                                    person.Status == Status.Healthy &&
-                                    person.DistanceTo(p) <= Constants.InfluenceRadius);
+                person.Status == Status.Healthy &&
+                person.DistanceTo(p) <= Constants.InfluenceRadius);
         }
 
         double approxRollingAverage(double avg, double new_sample) {
-
             avg -= avg / numSamples;
             avg += new_sample / numSamples;
 
@@ -86,6 +84,7 @@ namespace SicknessSim {
             var stopwatch = Stopwatch.StartNew();
             //Parallel.ForEach(Population, person => {
             foreach (var person in Population) {
+                quadTree.Clear();
                 person.Tick(time);
 
                 if (person.Status != Status.Healthy) {
@@ -124,10 +123,7 @@ namespace SicknessSim {
                     }
                 }
             }
-            // ehhhhhh
-            Population.Where(p => p.ToBeRemoved).ToList().ForEach(p => quadTree.Remove(p));
             Population.RemoveAll(p => p.ToBeRemoved);
-
 
             var infectedCount = Population.Count(p => p.Status != Status.Healthy);
             if (infectedCount == 0) {
