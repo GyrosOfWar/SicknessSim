@@ -85,7 +85,7 @@ namespace SicknessSim {
             return (Direction)f;
         }
 
-        private Vector moveVector(Direction direction, double distance) {
+        private Vector moveVector(Direction direction, int distance) {
             var newPosition = Vector.One;
             switch (direction) {
                 case Direction.Top:
@@ -104,7 +104,7 @@ namespace SicknessSim {
                     Debug.Fail("should never happen");
                     break;
             }
-            const double size = Constants.RoomSize;
+            const int size = Constants.RoomSize;
 
             var clampedX = newPosition.X;
             var clampedY = newPosition.Y;
@@ -117,10 +117,10 @@ namespace SicknessSim {
             }
 
             if (clampedX > size) {
-                clampedX = 0.0;
+                clampedX = 0;
             }
             if (clampedY > size) {
-                clampedY = 0.0;
+                clampedY = 0;
             }
 
             var newPositionClamped = new Vector(clampedX, clampedY);
@@ -160,7 +160,7 @@ namespace SicknessSim {
                     break;
                 case Status.Infectious:
                     if (t >= TimeInfected + Constants.TimeInfectious) {
-                        Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
+                       // Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
                         Status = Status.Sick;
                         TimeSick = t;
                     }
@@ -169,11 +169,11 @@ namespace SicknessSim {
                     if (t >= TimeSick + Constants.TimeSick) {
                         double u = rng.NextDouble();
                         if (u <= currentDieRate) {
-                            Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
+                          //  Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
                             Status = Status.Dead;
                             TimeDied = t;
                         } else {
-                            currentDieRate *= 2.0;
+                            currentDieRate *= 1.1;
                         }
                     }
                     break;

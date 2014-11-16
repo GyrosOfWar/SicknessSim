@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -25,6 +26,10 @@ namespace SicknessSim {
         }
 
         public void DrawSimulation() {
+            if (simulation.SimulationFinished) {
+                return;
+            }
+
             using (bitmap.GetBitmapContext()) {
                 bitmap.Clear(Colors.Black);
                 foreach (var person in simulation.Persons) {
@@ -52,6 +57,13 @@ namespace SicknessSim {
                     bitmap.FillEllipseCentered((int) person.Position.X, (int) person.Position.Y, 2, 2, color);
                 }
             }
+        }
+
+        private void img_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            var coordinates = e.GetPosition(img);
+            var person = new Person(new Vector((int) coordinates.X, (int) coordinates.Y), Status.Infectious,
+                                    simulation.Rng) {TimeInfected = simulation.Time};
+            simulation.AddPerson(person);
         }
     }
 }

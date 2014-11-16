@@ -5,9 +5,9 @@ namespace SicknessSim {
         public static readonly Vector Zero = new Vector(0, 0);
 
         public static readonly Vector One = new Vector(1, 1);
-        public readonly double X, Y;
+        public readonly int X, Y;
 
-        public Vector(double X, double Y) {
+        public Vector(int X, int Y) {
             this.X = X;
             this.Y = Y;
         }
@@ -44,11 +44,11 @@ namespace SicknessSim {
             return new Vector(a.X * b.X, a.Y * b.Y);
         }
 
-        public static Vector operator *(Vector a, double b) {
+        public static Vector operator *(Vector a, int b) {
             return new Vector(a.X * b, a.Y * b);
         }
 
-        public static Vector operator +(Vector a, double b) {
+        public static Vector operator +(Vector a, int b) {
             return new Vector(a.X + b, a.Y + b);
         }
 
@@ -60,10 +60,13 @@ namespace SicknessSim {
             return !(a.Equals(b));
         }
 
-        public double DistanceTo(Vector other) {
-            var xx = (X - other.X) * (X * other.X);
-            var yy = (Y - other.Y) * (Y * other.Y);
-            return Math.Sqrt(xx + yy);
+        public int DistanceTo(Vector other) {
+            var xx = (this.X - other.X) * (this.X - other.X);
+            var yy = (this.Y - other.Y) * (this.Y - other.Y);
+
+            return (int) Math.Sqrt(xx + yy);
+
+            //return Math.Abs(this.X - other.X) + Math.Abs(this.Y - other.Y);
         }
     }
 }
