@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Windows;
 
 namespace SicknessSim {
     internal enum Status {
@@ -17,10 +18,12 @@ namespace SicknessSim {
         Left = 3
     }
 
-    internal class Person : IDisposable {
+    internal class Person: IDisposable, IQuadObject {
         private static readonly List<bool> UsedCounter = new List<bool>();
         private static readonly object Lock = new object();
         private readonly Random rng;
+        private Rect _bounds;
+        private double currentDieRate;
         private Direction facingDirection;
         private int lastDirectionChange;
 
@@ -56,13 +59,17 @@ namespace SicknessSim {
         public int? TimeSick { get; set; }
         public bool ToBeRemoved { get; set; }
 
-        private double currentDieRate;
-
         public void Dispose() {
             lock (Lock) {
                 UsedCounter[Id] = false;
             }
         }
+
+        public Rect Bounds {
+            get { return _bounds; }
+        }
+
+        public event EventHandler BoundsChanged;
 
         public override string ToString() {
             return Id + ": " + Status;
@@ -82,7 +89,7 @@ namespace SicknessSim {
         private Direction randomDirection() {
             var f = rng.Next(4);
 
-            return (Direction)f;
+            return (Direction) f;
         }
 
         private Vector moveVector(Direction direction, int distance) {
@@ -90,15 +97,19 @@ namespace SicknessSim {
             switch (direction) {
                 case Direction.Top:
                     newPosition = Position + new Vector(0, -distance);
+                    _bounds.Y -= distance;
                     break;
                 case Direction.Right:
                     newPosition = Position + new Vector(distance, 0);
+                    _bounds.X += distance;
                     break;
                 case Direction.Down:
                     newPosition = Position + new Vector(0, distance);
+                    _bounds.Y += distance;
                     break;
                 case Direction.Left:
                     newPosition = Position + new Vector(-distance, 0);
+                    _bounds.X += distance;
                     break;
                 default:
                     Debug.Fail("should never happen");
@@ -124,6 +135,7 @@ namespace SicknessSim {
             }
 
             var newPositionClamped = new Vector(clampedX, clampedY);
+            RaiseBoundsChanged();
 
             return newPositionClamped;
         }
@@ -135,7 +147,7 @@ namespace SicknessSim {
                     var newPosition = moveVector(facingDirection, Constants.MoveDistance);
                     Position = newPosition;
                     break;
-                // Sick or dead people don't move
+                    // Sick or dead people don't move
                 case Status.Sick:
                 case Status.Dead:
                     break;
@@ -152,7 +164,7 @@ namespace SicknessSim {
                     facingDirection = randomDirection();
                     lastDirectionChange = t;
                 }
-                Move();
+                //Move();
             }
 
             switch (Status) {
@@ -160,24 +172,31 @@ namespace SicknessSim {
                     break;
                 case Status.Infectious:
                     if (t >= TimeInfected + Constants.TimeInfectious) {
-                       // Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
+                        // Console.WriteLine("Person {0} was infected at {1} and became sick at {2}", Id, TimeInfected, t);
                         Status = Status.Sick;
                         TimeSick = t;
                     }
                     break;
                 case Status.Sick:
                     if (t >= TimeSick + Constants.TimeSick) {
-                        double u = rng.NextDouble();
+                        var u = rng.NextDouble();
                         if (u <= currentDieRate) {
-                          //  Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
+                            //  Console.WriteLine("Person {0} became sick at {1} and died at {2}", Id, TimeSick, t);
                             Status = Status.Dead;
                             TimeDied = t;
-                        } else {
+                        }
+                        else {
                             currentDieRate *= 1.1;
                         }
                     }
                     break;
             }
+        }
+
+        private void RaiseBoundsChanged() {
+            var handler = BoundsChanged;
+            if (handler != null)
+                handler(this, new EventArgs());
         }
     }
 }

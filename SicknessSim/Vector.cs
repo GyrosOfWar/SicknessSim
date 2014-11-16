@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace SicknessSim {
-    internal struct Vector {
+    public struct Vector {
         public static readonly Vector Zero = new Vector(0, 0);
 
         public static readonly Vector One = new Vector(1, 1);
@@ -50,6 +50,10 @@ namespace SicknessSim {
 
         public static Vector operator +(Vector a, int b) {
             return new Vector(a.X + b, a.Y + b);
+        }
+
+        public static Vector operator -(Vector a, int b) {
+            return new Vector(a.X - b, a.Y - b);
         }
 
         public static bool operator ==(Vector a, Vector b) {

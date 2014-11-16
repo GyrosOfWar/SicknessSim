@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Controls;
+using System.Windows;
 
 namespace SicknessSim {
     internal class Simulation {
@@ -12,6 +12,7 @@ namespace SicknessSim {
         private int time;
         private double averageNeighbors;
         private double numSamples;
+        private QuadTree<Person> quadTree;
 
         public Simulation(int popSize) {
             rng = new Random();
@@ -36,6 +37,12 @@ namespace SicknessSim {
             SimulationFinished = false;
             averageNeighbors = 1;
             numSamples = 1;
+
+            quadTree = new QuadTree<Person>(new Size(25, 25), 32, false);
+            foreach (var person in Population) {
+                quadTree.Insert(person);
+                Console.WriteLine("Inserted " + person);
+            }
         }
 
         public bool SimulationFinished { get; private set; }
@@ -52,11 +59,17 @@ namespace SicknessSim {
 
         public void AddPerson(Person p) {
             Population.Add(p);
+            quadTree.Insert(p);
         }
 
         private IEnumerable<Person> findPersonsInInfluenceRadius(Person p) {
-            return Population.Where(person =>
-                                    // Only healthy persons can get infected
+            const int r = Constants.InfluenceRadius;
+            var pp = p.Position - r;
+            const int l = r * 2;
+            var query = quadTree.Query(new Rect(pp.X, pp.Y, l, l));
+
+            return query.Where(person =>
+                //  Only healthy persons can get infected
                                     person.Status == Status.Healthy &&
                                     person.DistanceTo(p) <= Constants.InfluenceRadius);
         }
@@ -71,8 +84,8 @@ namespace SicknessSim {
 
         public void Tick() {
             var stopwatch = Stopwatch.StartNew();
-            Parallel.ForEach(Population, person => {
-                //foreach (var person in Population) {
+            //Parallel.ForEach(Population, person => {
+            foreach (var person in Population) {
                 person.Tick(time);
 
                 if (person.Status != Status.Healthy) {
@@ -102,7 +115,6 @@ namespace SicknessSim {
                         if (t <= rate) {
                             p.Status = Status.Infectious;
                             p.TimeInfected = time;
-                            //  Console.WriteLine("Person {0} infected {1}", person.Id, p.Id);
                         }
                     }
 
@@ -111,9 +123,11 @@ namespace SicknessSim {
                         person.ToBeRemoved = true;
                     }
                 }
-            });
-
+            }
+            // ehhhhhh
+            Population.Where(p => p.ToBeRemoved).ToList().ForEach(p => quadTree.Remove(p));
             Population.RemoveAll(p => p.ToBeRemoved);
+
 
             var infectedCount = Population.Count(p => p.Status != Status.Healthy);
             if (infectedCount == 0) {
