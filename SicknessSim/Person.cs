@@ -146,6 +146,16 @@ namespace SicknessSim {
             return Position.DistanceTo(person.Position);
         }
 
+        public override bool Equals(object obj) {
+            if (obj is Person) {
+                var p = (Person)obj;
+
+                return p.Id == this.Id;
+            }
+
+            return false;
+        }
+
         public void Tick(int t) {
             if (Status != Status.Sick && Status != Status.Dead) {
                 if (t >= lastDirectionChange + Constants.ChangeDirectionAfter) {

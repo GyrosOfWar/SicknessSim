@@ -7,7 +7,7 @@ using System.Windows;
 
 namespace SicknessSim {
     internal class Simulation {
-        private readonly List<Person> Population;
+        //private readonly List<Person> Population;
         private readonly Random rng;
         private int time;
         private double averageNeighbors;
@@ -17,7 +17,7 @@ namespace SicknessSim {
         public Simulation(int popSize) {
             rng = new Random(1234);
 
-            Population = new List<Person>(popSize);
+            var Population = new List<Person>(popSize);
             for (var i = 0; i < popSize - Constants.IniitialInfected; i++) {
                 var xPos = rng.Next(Constants.RoomSize);
                 var yPos = rng.Next(Constants.RoomSize);
@@ -38,7 +38,7 @@ namespace SicknessSim {
             averageNeighbors = 1;
             numSamples = 1;
 
-            quadTree = new QuadTree(0, new Rect(0, 0, Constants.RoomSize, Constants.RoomSize));
+            quadTree = new QuadTree();
             foreach (var person in Population) {
                 quadTree.Insert(person);
             }
@@ -51,13 +51,13 @@ namespace SicknessSim {
         }
 
         public List<Person> Persons {
-            get { return Population; }
+            get { return quadTree.AllPersons; }
         }
 
         public Random Rng { get { return rng; } }
 
         public void AddPerson(Person p) {
-            Population.Add(p);
+            quadTree.Insert(p);
         }
 
         private IEnumerable<Person> findPersonsInInfluenceRadius(Person p) {
@@ -72,6 +72,12 @@ namespace SicknessSim {
                 person.DistanceTo(p) <= Constants.InfluenceRadius);
         }
 
+        private IEnumerable<Person> findPersonsWithoutQuadtree(Person p) {
+            return quadTree.AllPersons.Where(person =>
+                person.Status == Status.Healthy &&
+                person.DistanceTo(p) <= Constants.InfluenceRadius);
+        }
+
         double approxRollingAverage(double avg, double new_sample) {
             avg -= avg / numSamples;
             avg += new_sample / numSamples;
@@ -82,17 +88,19 @@ namespace SicknessSim {
         public void Tick() {
             var stopwatch = Stopwatch.StartNew();
 
-            quadTree.Clear();
-            foreach (var x in Population) {
-                quadTree.Insert(x);
-            }
+            quadTree.Refresh();
 
             //Parallel.ForEach(Population, person => {
-            foreach (var person in quadTree.AllPersons()) {
+            foreach (var person in quadTree.AllPersons) {
                 person.Tick(time);
 
                 if (person.Status != Status.Healthy) {
+                    var test = findPersonsWithoutQuadtree(person).ToList();
                     var influenced = findPersonsInInfluenceRadius(person).ToList();
+                    foreach (var p in test) {
+                        Debug.Assert(influenced.Contains(p));
+                    }
+
                     var rate = 0.0;
                     switch (person.Status) {
                         case Status.Infectious:
@@ -127,15 +135,14 @@ namespace SicknessSim {
                     }
                 }
             }
-            Population.RemoveAll(p => p.ToBeRemoved);
 
-            var infectedCount = Population.Count(p => p.Status != Status.Healthy);
+            var infectedCount = quadTree.AllPersons.Count(p => p.Status != Status.Healthy);
             if (infectedCount == 0) {
                 SimulationFinished = true;
                 return;
             }
 
-            if (Population.Count == 0) {
+            if (quadTree.AllPersons.Count == 0) {
                 SimulationFinished = true;
                 return;
             }

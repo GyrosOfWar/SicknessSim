@@ -58,12 +58,12 @@ namespace SicknessSim {
                     //bitmap.FillEllipseCentered((int)person.Position.X, (int)person.Position.Y, r, r, Color.FromArgb(50, 255, 255, 0));
 
                     bitmap.FillEllipseCentered(person.Position.X, person.Position.Y, 2, 2, color);
-                    if (person.Id % 20 == 0) {
-                        const int r = Constants.InfluenceRadius;
-                        var origin = person.Position - r;
-                        const int length = r * 2;
-                        bitmap.DrawRectangle(origin.X, origin.Y, origin.X + length, origin.Y + length, Colors.White);
-                    }
+                    //if (person.Id % 20 == 0) {
+                    //    const int r = Constants.InfluenceRadius;
+                    //    var origin = person.Position - r;
+                    //    const int length = r * 2;
+                    //    bitmap.DrawRectangle(origin.X, origin.Y, origin.X + length, origin.Y + length, Colors.White);
+                    //}
                 }
             }
         }
