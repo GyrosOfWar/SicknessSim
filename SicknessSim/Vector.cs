@@ -68,7 +68,7 @@ namespace SicknessSim {
             var xx = (this.X - other.X) * (this.X - other.X);
             var yy = (this.Y - other.Y) * (this.Y - other.Y);
 
-            return (int) Math.Sqrt(xx + yy);
+            return (int) Math.Round(Math.Sqrt(xx + yy));
 
             //return Math.Abs(this.X - other.X) + Math.Abs(this.Y - other.Y);
         }

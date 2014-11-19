@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 
 namespace SicknessSim {
     class QuadTree {
-        private QuadTreeNode root;
-        private List<Person> allPersons;
+        private readonly QuadTreeNode root;
+        private readonly List<Person> allPersons;
 
         public QuadTree() {
             root = new QuadTreeNode(0, new Rect(0, 0, Constants.RoomSize, Constants.RoomSize));
@@ -32,10 +33,18 @@ namespace SicknessSim {
         public List<Person> Query(Rect rectangle) {
             return root.Query(rectangle);
         }
+
+        public bool Exists(Person p) {
+            return root.Exists(p);
+        }
+
+        public List<Person> Enumerate() {
+            return root.Enumerate();
+        }
     }
 
     internal class QuadTreeNode {
-        private const int OBJECTS_PER_NODE = 32;
+        private const int OBJECTS_PER_NODE =4;
         private const int MAX_DEPTH = 200;
         private readonly QuadTreeNode[] children;
 
@@ -59,6 +68,19 @@ namespace SicknessSim {
             }
         }
 
+        public bool Exists(Person p) {
+            if (bounds.Contains(p.Position.X, p.Position.Y) && objects.Exists(p.Equals)) {
+                return true;
+            }
+
+            foreach (var child in children) {
+                if (child != null && child.Exists(p)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
 
         private void Split() {
             var subWidth = (int) bounds.Width / 2;
@@ -71,73 +93,6 @@ namespace SicknessSim {
             children[3] = new QuadTreeNode(level + 1, new Rect(x + subWidth, y + subHeight, subWidth, subHeight));
         }
 
-        private int getIndex(Vector point) {
-            var index = -1;
-            var verticalMidpoint = bounds.X + (bounds.Width / 2);
-            var horizontalMidpoint = bounds.Y + (bounds.Height / 2);
-
-            // Object can completely fit within the top quadrants
-            var topQuadrant = (point.Y < horizontalMidpoint);
-            // Object can completely fit within the bottom quadrants
-            var bottomQuadrant = (point.Y > horizontalMidpoint);
-
-            // Object can completely fit within the left quadrants
-            if (point.X < verticalMidpoint) {
-                if (topQuadrant) {
-                    index = 1;
-                }
-                else if (bottomQuadrant) {
-                    index = 2;
-                }
-            }
-                // Object can completely fit within the right quadrants
-            else if (point.X > verticalMidpoint) {
-                if (topQuadrant) {
-                    index = 0;
-                }
-                else if (bottomQuadrant) {
-                    index = 3;
-                }
-            }
-
-            return index;
-        }
-
-        private int getIndex(Rect rectangle) {
-            int index = -1;
-            double verticalMidpoint = bounds.X + (bounds.Width / 2);
-            double horizontalMidpoint = bounds.Y + (bounds.Height / 2);
-
-            // Object can completely fit within the top quadrants
-            bool topQuadrant = (rectangle.Y < horizontalMidpoint && rectangle.Y + rectangle.Height < horizontalMidpoint);
-            // Object can completely fit within the bottom quadrants
-            bool bottomQuadrant = (rectangle.Y > horizontalMidpoint);
-
-            // Object can completely fit within the left quadrants
-            if (rectangle.X < verticalMidpoint && rectangle.X + rectangle.Width < verticalMidpoint) {
-                if (topQuadrant) {
-                    index = 1;
-                } else if (bottomQuadrant) {
-                    index = 2;
-                }
-            }
-                // Object can completely fit within the right quadrants
-             else if (rectangle.X > verticalMidpoint) {
-                if (topQuadrant) {
-                    index = 0;
-                } else if (bottomQuadrant) {
-                    index = 3;
-                }
-            }
-
-            return index;
-        }
-
-        private static bool Contains(Rect rect, Vector point) {
-            return rect.Left <= point.X && rect.Right >= point.X &&
-                rect.Top <= point.Y && rect.Bottom >= point.Y;
-        }
-
         public List<Person> Query(Rect rectangle) {
             var returnList = new List<Person>();
 
@@ -145,11 +100,7 @@ namespace SicknessSim {
                 return returnList;
             }
 
-            foreach (var person in objects) {
-                if (Contains(rectangle, person.Position)) {
-                    returnList.Add(person);
-                }
-            }
+            returnList.AddRange(objects.Where(person => rectangle.Contains(person.Position.X, person.Position.Y)));
 
             if (children[0] == null) {
                 return returnList;
@@ -160,38 +111,37 @@ namespace SicknessSim {
             }
 
             return returnList;
-
         }
 
-        public void Insert(Person person) {
-            if (children[0] != null) {
-                var index = getIndex(person.Position);
+        public List<Person> Enumerate() {
+            var list = new List<Person>();
+            list.AddRange(objects);
 
-                if (index != -1) {
-                    children[index].Insert(person);
-                    return;
+            foreach (var child in children) {
+                if (child != null) {
+                    list.AddRange(child.Enumerate());
                 }
             }
-            objects.Add(person);
+            
 
-            if (objects.Count >= OBJECTS_PER_NODE && level < MAX_DEPTH) {
-                if (children[0] == null) {
-                    Split();
-                }
+            return list;
+        } 
 
-                var i = 0;
-                while (i < objects.Count) {
-                    var index = getIndex(objects[i].Position);
-                    if (index != -1) {
-                        var obj = objects[i];
-                        objects.RemoveAt(i);
-                        children[index].Insert(obj);
-                    }
-                    else {
-                        i++;
-                    }
-                }
+        public bool Insert(Person person) {
+            if (!bounds.Contains(person.Position.X, person.Position.Y)) {
+                return false;
             }
+
+            if (objects.Count < OBJECTS_PER_NODE) {
+                objects.Add(person);
+                return true;
+            }
+
+            if (children[0] == null) {
+                Split();
+            }
+
+            return children.Any(child => child.Insert(person));
         }
     }
 }

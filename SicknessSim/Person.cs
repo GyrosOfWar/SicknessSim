@@ -142,18 +142,14 @@ namespace SicknessSim {
             }
         }
 
-        public double DistanceTo(Person person) {
+        public int DistanceTo(Person person) {
             return Position.DistanceTo(person.Position);
         }
 
         public override bool Equals(object obj) {
-            if (obj is Person) {
-                var p = (Person)obj;
-
-                return p.Id == this.Id;
-            }
-
-            return false;
+            var person = obj as Person;
+            if (person == null) return false;
+            return person.Id == this.Id;
         }
 
         public void Tick(int t) {

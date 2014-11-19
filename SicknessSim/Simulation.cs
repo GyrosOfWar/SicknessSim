@@ -9,10 +9,9 @@ namespace SicknessSim {
     internal class Simulation {
         //private readonly List<Person> Population;
         private readonly Random rng;
-        private int time;
         private double averageNeighbors;
         private double numSamples;
-        private QuadTree quadTree;
+        private readonly QuadTree quadTree;
 
         public Simulation(int popSize) {
             rng = new Random(1234);
@@ -28,12 +27,11 @@ namespace SicknessSim {
             for (var i = 0; i < Constants.IniitialInfected; i++) {
                 var xPos = rng.Next(Constants.RoomSize);
                 var yPos = rng.Next(Constants.RoomSize);
-                var person = new Person(new Vector(xPos, yPos), Status.Infectious, rng);
-                person.TimeInfected = 0;
+                var person = new Person(new Vector(xPos, yPos), Status.Infectious, rng) {TimeInfected = 0};
                 Population.Add(person);
             }
 
-            time = 0;
+            Time = 0;
             SimulationFinished = false;
             averageNeighbors = 1;
             numSamples = 1;
@@ -42,13 +40,13 @@ namespace SicknessSim {
             foreach (var person in Population) {
                 quadTree.Insert(person);
             }
+            var list = quadTree.Enumerate();
+            var length = list.Count;
         }
 
         public bool SimulationFinished { get; private set; }
 
-        public int Time {
-            get { return time; }
-        }
+        public int Time { get; private set; }
 
         public List<Person> Persons {
             get { return quadTree.AllPersons; }
@@ -87,18 +85,18 @@ namespace SicknessSim {
 
         public void Tick() {
             var stopwatch = Stopwatch.StartNew();
-
             quadTree.Refresh();
 
             //Parallel.ForEach(Population, person => {
             foreach (var person in quadTree.AllPersons) {
-                person.Tick(time);
+                person.Tick(Time);
 
                 if (person.Status != Status.Healthy) {
-                    var test = findPersonsWithoutQuadtree(person).ToList();
                     var influenced = findPersonsInInfluenceRadius(person).ToList();
+                    var test = findPersonsWithoutQuadtree(person).ToList();
                     foreach (var p in test) {
-                        Debug.Assert(influenced.Contains(p));
+                        Debug.Assert(quadTree.Exists(p));
+                        //Debug.Assert(influenced.Contains(p));
                     }
 
                     var rate = 0.0;
@@ -125,11 +123,11 @@ namespace SicknessSim {
 
                         if (t <= rate) {
                             p.Status = Status.Infectious;
-                            p.TimeInfected = time;
+                            p.TimeInfected = Time;
                         }
                     }
 
-                    if (person.Status == Status.Dead && time >= person.TimeDied + Constants.RemoveDeadAfter) {
+                    if (person.Status == Status.Dead && Time >= person.TimeDied + Constants.RemoveDeadAfter) {
                         //Console.WriteLine("Removing person {0}", person.Id);
                         person.ToBeRemoved = true;
                     }
@@ -146,10 +144,12 @@ namespace SicknessSim {
                 SimulationFinished = true;
                 return;
             }
-            time++;
+            Time++;
             stopwatch.Stop();
 
-            if (time % 50 == 0) {
+            quadTree.Refresh();
+
+            if (Time % 50 == 0) {
                 Console.WriteLine(stopwatch.ElapsedMilliseconds);
                 Console.WriteLine("Average neighbors: {0}", averageNeighbors);
             }
