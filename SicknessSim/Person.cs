@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Windows;
 
 namespace SicknessSim {
-    internal enum Status {
+    public enum Status {
         Healthy,
         Infectious,
         Sick,
@@ -18,7 +18,7 @@ namespace SicknessSim {
         Left = 3
     }
 
-    internal class Person: IDisposable {
+    public class Person: IDisposable {
         private static readonly List<bool> UsedCounter = new List<bool>();
         private static readonly object Lock = new object();
         private readonly Random rng;
@@ -52,7 +52,6 @@ namespace SicknessSim {
         public Vector Position { get; private set; }
         public Status Status { get; set; }
         public int Id { get; private set; }
-
         public int? TimeInfected { get; set; }
         public int? TimeDied { get; private set; }
         public int? TimeSick { get; set; }

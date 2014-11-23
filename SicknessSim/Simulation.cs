@@ -2,16 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace SicknessSim {
     internal class Simulation {
-        //private readonly List<Person> Population;
-        private readonly Random rng;
-        private double averageNeighbors;
-        private double numSamples;
         private readonly QuadTree quadTree;
+        private readonly Random rng;
+        private double timePerTick;
 
         public Simulation(int popSize) {
             rng = new Random(1234);
@@ -33,15 +30,12 @@ namespace SicknessSim {
 
             Time = 0;
             SimulationFinished = false;
-            averageNeighbors = 1;
-            numSamples = 1;
+            
 
-            quadTree = new QuadTree();
+            quadTree = new QuadTree(Constants.RoomSize, Constants.RoomSize);
             foreach (var person in Population) {
                 quadTree.Insert(person);
             }
-            var list = quadTree.Enumerate();
-            var length = list.Count;
         }
 
         public bool SimulationFinished { get; private set; }
@@ -52,7 +46,9 @@ namespace SicknessSim {
             get { return quadTree.AllPersons; }
         }
 
-        public Random Rng { get { return rng; } }
+        public Random Rng {
+            get { return rng; }
+        }
 
         public void AddPerson(Person p) {
             quadTree.Insert(p);
@@ -65,40 +61,27 @@ namespace SicknessSim {
             var points = quadTree.Query(new Rect(origin.X, origin.Y, length, length));
 
             return points.Where(person =>
-                //  Only healthy persons can get infected
-                person.Status == Status.Healthy &&
-                person.DistanceTo(p) <= Constants.InfluenceRadius);
+                                //  Only healthy persons can get infected
+                                person.Status == Status.Healthy &&
+                                person.DistanceTo(p) <= Constants.InfluenceRadius);
         }
 
-        private IEnumerable<Person> findPersonsWithoutQuadtree(Person p) {
-            return quadTree.AllPersons.Where(person =>
-                person.Status == Status.Healthy &&
-                person.DistanceTo(p) <= Constants.InfluenceRadius);
-        }
-
-        double approxRollingAverage(double avg, double new_sample) {
-            avg -= avg / numSamples;
-            avg += new_sample / numSamples;
+        private double approxRollingAverage(double avg, double new_sample) {
+            avg -= avg / Time;
+            avg += new_sample / Time;
 
             return avg;
         }
 
         public void Tick() {
-            var stopwatch = Stopwatch.StartNew();
-            quadTree.Refresh();
+            var sw = Stopwatch.StartNew();
 
-            //Parallel.ForEach(Population, person => {
-            foreach (var person in quadTree.AllPersons) {
+            quadTree.Refresh();
+            quadTree.Visit((person, nodeId) => {
                 person.Tick(Time);
 
                 if (person.Status != Status.Healthy) {
                     var influenced = findPersonsInInfluenceRadius(person).ToList();
-                    var test = findPersonsWithoutQuadtree(person).ToList();
-                    foreach (var p in test) {
-                        Debug.Assert(quadTree.Exists(p));
-                        //Debug.Assert(influenced.Contains(p));
-                    }
-
                     var rate = 0.0;
                     switch (person.Status) {
                         case Status.Infectious:
@@ -114,9 +97,6 @@ namespace SicknessSim {
                             Debug.Fail("A healthy person is sick?");
                             break;
                     }
-                    var c = influenced.Count;
-                    numSamples += c;
-                    averageNeighbors = approxRollingAverage(averageNeighbors, c);
 
                     foreach (var p in influenced) {
                         var t = rng.NextDouble();
@@ -128,11 +108,10 @@ namespace SicknessSim {
                     }
 
                     if (person.Status == Status.Dead && Time >= person.TimeDied + Constants.RemoveDeadAfter) {
-                        //Console.WriteLine("Removing person {0}", person.Id);
                         person.ToBeRemoved = true;
                     }
                 }
-            }
+            });
 
             var infectedCount = quadTree.AllPersons.Count(p => p.Status != Status.Healthy);
             if (infectedCount == 0) {
@@ -145,13 +124,11 @@ namespace SicknessSim {
                 return;
             }
             Time++;
-            stopwatch.Stop();
+            sw.Stop();
 
-            quadTree.Refresh();
-
-            if (Time % 50 == 0) {
-                Console.WriteLine(stopwatch.ElapsedMilliseconds);
-                Console.WriteLine("Average neighbors: {0}", averageNeighbors);
+            timePerTick = approxRollingAverage(timePerTick, sw.ElapsedMilliseconds);
+            if (Time % 30 == 0) {
+                Console.WriteLine("t_tick = " + timePerTick);
             }
         }
     }

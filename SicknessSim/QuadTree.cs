@@ -1,51 +1,61 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 
 namespace SicknessSim {
-    class QuadTree {
+    public class QuadTree {
         private readonly QuadTreeNode root;
-        private readonly List<Person> allPersons;
+        public static int MaxDepth = 12;
+        public static int MaxObjectsPerNode = 8;
 
-        public QuadTree() {
-            root = new QuadTreeNode(0, new Rect(0, 0, Constants.RoomSize, Constants.RoomSize));
-            allPersons = new List<Person>();
-        }
-
-        public void Refresh() {
-            root.Clear();
-            allPersons.RemoveAll(p => p.ToBeRemoved);
-            foreach (var item in allPersons) {
-                root.Insert(item);
-            }
+        public QuadTree(int xSize, int ySize, int maxDepth = 12, int objectsPerNode = 8) {
+            root = new QuadTreeNode(0, new Rect(0, 0, xSize, ySize));
+            MaxDepth = maxDepth;
+            MaxObjectsPerNode = objectsPerNode;
         }
 
         public List<Person> AllPersons {
-            get { return allPersons; }
+            get { return root.Enumerate(); }
+        }
+
+        public void Refresh() {
+            var persons = new List<Person>();
+            root.Visit((p, _) => { if (!p.ToBeRemoved) persons.Add(p); });
+
+            root.Clear();
+            Debug.Assert(Count() == 0);
+            foreach (var p in persons) {
+                root.Insert(p);
+            }
         }
 
         public void Insert(Person person) {
             root.Insert(person);
-            allPersons.Add(person);
         }
 
         public List<Person> Query(Rect rectangle) {
             return root.Query(rectangle);
         }
 
-        public bool Exists(Person p) {
-            return root.Exists(p);
+        public bool Contains(Person p) {
+            return root.Contains(p);
         }
 
-        public List<Person> Enumerate() {
-            return root.Enumerate();
+        public void Visit(Action<Person, int> callback) {
+            root.Visit(callback);
+        }
+
+        public int Count() {
+            var i = 0;
+            Visit((p, _) => i++);
+            return i;
         }
     }
 
     internal class QuadTreeNode {
-        private const int OBJECTS_PER_NODE =4;
-        private const int MAX_DEPTH = 200;
+        private static int idCounter;
         private readonly QuadTreeNode[] children;
 
         private readonly int level;
@@ -53,32 +63,60 @@ namespace SicknessSim {
         private Rect bounds;
 
         public QuadTreeNode(int level, Rect bounds) {
+            Id = idCounter++;
             this.level = level;
             this.bounds = bounds;
             objects = new List<Person>();
             children = new QuadTreeNode[4];
-          //  System.Console.WriteLine(level);
         }
 
-        public void Clear() {
-            objects.Clear();
+        public int Id { get; private set; }
 
-            foreach (var child in children.Where(child => child != null)) {
-                child.Clear();
+        public void Clear() {
+            VisitNode(n => n.objects.Clear());
+            Debug.Assert(Count() == 0);
+        }
+
+        public void VisitNode(Action<QuadTreeNode> callback) {
+            callback(this);
+
+            foreach (var child in children) {
+                if (child != null) {
+                    child.VisitNode(callback);
+                }
             }
         }
 
-        public bool Exists(Person p) {
-            if (bounds.Contains(p.Position.X, p.Position.Y) && objects.Exists(p.Equals)) {
-                return true;
+        private int Count() {
+            int i = 0;
+
+            Visit((p, _) => i++);
+
+            return i;
+        }
+
+        public void Visit(Action<Person, int> callback) {
+            foreach (var obj in objects) {
+                callback(obj, Id);
             }
 
             foreach (var child in children) {
-                if (child != null && child.Exists(p)) {
-                    return true;
+                if (child != null) {
+                    child.Visit(callback);
                 }
             }
-            return false;
+        }
+
+        public bool Contains(Person p) {
+            var contained = false;
+
+            Visit((q, _) => {
+                if (p.Id == q.Id) {
+                    contained = true;
+                }
+            });
+
+            return contained;
         }
 
 
@@ -115,24 +153,16 @@ namespace SicknessSim {
 
         public List<Person> Enumerate() {
             var list = new List<Person>();
-            list.AddRange(objects);
-
-            foreach (var child in children) {
-                if (child != null) {
-                    list.AddRange(child.Enumerate());
-                }
-            }
-            
-
+            Visit((p, id) => list.Add(p));
             return list;
-        } 
+        }
 
         public bool Insert(Person person) {
             if (!bounds.Contains(person.Position.X, person.Position.Y)) {
                 return false;
             }
 
-            if (objects.Count < OBJECTS_PER_NODE) {
+            if (objects.Count < QuadTree.MaxObjectsPerNode) {
                 objects.Add(person);
                 return true;
             }

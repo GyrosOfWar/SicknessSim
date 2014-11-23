@@ -2,7 +2,7 @@ using System.Windows.Media;
 
 namespace SicknessSim {
     internal static class Constants {
-        public const int PopulationSize = 100;
+        public const int PopulationSize = 2000;
         public const int IniitialInfected = 15;
         public const int InfluenceRadius = 25;
 
